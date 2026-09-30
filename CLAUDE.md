@@ -58,18 +58,21 @@ Expert for verification: Sofie Maes (Payroll Compliance Lead BE).
 ```
 .gitignore / .env.example / README.md / CLAUDE.md
 backend/
-  .venv/                (gitignored; activate: .venv\Scripts\activate.bat)
-  requirements.txt
-  app/schemas.py        contract: AskRequest, Signal, Source, Conflict, AskResponse
-  app/main.py           /health, /auth/login, /ask, /claims/{id}/verify; CORS allowlist
-  app/security.py       login, in-memory bearer tokens (4h), require_role
-  app/trust_score.py    deterministic signals + weighted trust_score
-  app/engine.py         loads sources, scores them, conflicts, uncertainty, contact
-  data/sources.json     OLD DE mock scenario, to be retired
-  data/users.json       OLD DE users (Anna/Klaus/Sarah), to be replaced
+  requirements.txt      fastapi, uvicorn, python-dotenv, google-genai, pytest, httpx
+  app/schemas.py        contract: AskRequest, Signal, Source (incl client field), Conflict, AskResponse
+  app/main.py           /health, /auth/login, /ask, /claims/{id}/verify, /claims/verified; CORS 8501
+  app/security.py       login, in-memory bearer tokens (4h), require_role, input validation
+  app/trust_score.py    4 signals: recency, ownership, source_type, corroboration (weighted)
+  app/engine.py         loads data/corpus.json, scores, conflicts, experts.json for contact
+  app/claude_service.py Google GenAI comparison with JSON cache + fallback (no API key needed)
+  data/users.json       Jonas (consultant, Delvaux), Lars (consultant, Vermeulen), Sofie (expert)
+  data/ai_cache.json    cached AI responses for demo resilience
 data/
   corpus.json           Delvaux scenario, 9 docs: id, title, source_type, owner, updated_at, country, client, content
   experts.json          people lookup for "who to ask"
+tests/
+  test_security.py      auth, RBAC, IDOR, input validation (13 tests)
+  test_trust_score.py   scoring logic (6 tests)
 frontend/               not started
 ```
 
@@ -87,22 +90,25 @@ Done:
 1. Repo + secret hygiene (.gitignore, .env.example)
 2. Backend scaffold with response contract
 3. Delvaux corpus (9 trap docs) + experts.json
-4. Backend core (Sadaq): token auth + roles, deterministic scoring (recency, ownership, source_type), naive conflict detection, verify endpoint
+4. Backend core: token auth + roles, deterministic scoring (recency, ownership, source_type, corroboration), conflict detection, verify endpoint
+5. Switched to Delvaux scenario: engine reads data/corpus.json, users are Jonas/Lars/Sofie, sources.json retired, CORS 8501 only
+6. AI service (claude_service.py): Google GenAI source comparison with JSON cache + auto-fallback without API key
+7. Schema updated: Source has client field, source_type supports wiki and client_note
+8. trust_score.py: weights for wiki (0.4) and client_note (0.85), corroboration signal
+9. 19 passing tests (auth, RBAC, IDOR, input validation, trust scoring)
 
-Known gaps in the current backend:
-- `engine.py` reads the DE mock (`backend/data/sources.json`), not `data/corpus.json`
-- `/ask` returns every source: no retrieval, no filtering by the logged-in user's clients
-- `scope_match` and `corroboration` signals are not implemented
-- Conflict detection is hardcoded (policy vs chat), not claim-based
-- `Source` schema has no `client` field; `source_type` comment lacks `wiki` and `client_note` (needs a coordinated schema change)
-- CORS still allows `localhost:5173` (React is dropped)
-
-Pending in corpus: 8 to 10 filler docs (holiday pay, meal vouchers, company car, sick leave, onboarding, mobility budget...) so retrieval isn't trivial.
+Known gaps:
+- `/ask` returns all 9 sources: no retrieval, no filtering by question relevance
+- `scope_match` signal not implemented (country/client matching)
+- No client-based access control yet: Jonas can still see Garage Vermeulen docs (IDOR)
+- Conflict detection is type-based (formal vs informal), not claim-based
+- Login still uses hardcoded password "hackathon" for all users
+- Pending in corpus: 8-10 filler docs so retrieval isn't trivial
 
 ## Remaining roadmap
-1. Connect Aikido account + repo (DO NOT run the audit yet, save credits)
-2. Switch the backend to the Delvaux scenario: engine reads `data/corpus.json`, users.json becomes Jonas/Lars/Sofie, retire `sources.json`, CORS to 8501 only  <- NEXT
-3. Retrieval + scoring: find relevant docs, add scope_match + corroboration signals
+1. ~~Connect Aikido account + repo~~
+2. ~~Switch backend to Delvaux scenario~~ DONE
+3. Retrieval + scoring: find relevant docs, add scope_match signal  <- NEXT
 4. Frontend (Streamlit, parallel): one answer screen against /ask
 5. LLM layer: claim extraction, conflict detection, explained answer via Gemini
 6. Role-based access: consultants only see their own clients' docs (Vermeulen IDOR case)
@@ -112,8 +118,21 @@ Pending in corpus: 8 to 10 filler docs (holiday pay, meal vouchers, company car,
 10. docker-compose + README with "unfinished" section
 11. Feature freeze ~90 min before deadline, record video, submit
 
+## Login credentials (demo)
+All users use password `hackathon`. Usernames: `jonas`, `lars`, `sofie`.
+
+## API endpoints
+| Method | Path | Auth | Role |
+|--------|------|------|------|
+| GET | /health | No | - |
+| POST | /auth/login | No | - |
+| POST | /ask | Yes | consultant, expert |
+| POST | /claims/{id}/verify | Yes | expert only |
+| GET | /claims/verified | Yes | any logged in |
+
 ## Security notes (Aikido checks business logic, IDOR, authn, authz)
-- CORS stays restricted, no wildcard origins (tighten `allow_headers="*"` too)
+- CORS restricted to localhost:8501 (tighten `allow_headers="*"` before Aikido)
 - Access control enforced server-side from the session, never from request params
-- Known issue: login accepts the hardcoded password "hackathon" for every user while users.json holds unused (fake) bcrypt hashes. Fix before or as part of the Aikido round.
+- Known issue: login accepts hardcoded password "hackathon" for all users. Fix before Aikido round.
+- Input length validated (max 2000 chars on /ask)
 - No keys in code or history
