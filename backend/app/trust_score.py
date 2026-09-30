@@ -27,7 +27,7 @@ def _ownership_score(owner: str | None) -> Signal:
 
 
 def _source_type_score(source_type: str) -> Signal:
-    weights = {"policy": 0.95, "manual": 0.8, "email": 0.6, "chat": 0.3}
+    weights = {"policy": 0.95, "manual": 0.8, "email": 0.6, "client_note": 0.85, "wiki": 0.4, "chat": 0.3}
     score = weights.get(source_type, 0.5)
     return Signal(name="source_type", score=score, reason=f"Source type: {source_type}")
 

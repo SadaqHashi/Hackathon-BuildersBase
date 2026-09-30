@@ -26,6 +26,7 @@ def login(username: str, password: str) -> dict:
         "username": username,
         "role": user["role"],
         "country": user["country"],
+        "clients": user.get("clients", []),
         "display_name": user["display_name"],
         "expires": datetime.now(timezone.utc) + timedelta(hours=4),
     }

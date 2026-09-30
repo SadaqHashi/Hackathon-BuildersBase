@@ -14,8 +14,9 @@ class Source(BaseModel):
     owner: str | None
     updated_at: str
     country: str
-    source_type: str   # policy, manual, chat, email
+    source_type: str   # policy, manual, chat, email, wiki, client_note
     excerpt: str
+    client: str | None = None
     signals: list[Signal]
     trust_score: float
 

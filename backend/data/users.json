@@ -1,23 +1,23 @@
 [
   {
-    "username": "consultant_anna",
-    "password_hash": "$2b$12$LJ3m6Yq3z5K8v1G2x4wXOeQZ1y7Y6v8B9c0D3e4F5g6H7i8J9k0L",
+    "username": "jonas",
     "role": "consultant",
-    "country": "DE",
-    "display_name": "Anna Mueller"
+    "country": "BE",
+    "clients": ["Brouwerij Delvaux"],
+    "display_name": "Jonas Peeters"
   },
   {
-    "username": "expert_klaus",
-    "password_hash": "$2b$12$MK4n7Zr4a6L9w2H3y5xYPfRS2z8Z7w9C0d1E4f5G6h7I8j9K0l1M",
+    "username": "lars",
+    "role": "consultant",
+    "country": "BE",
+    "clients": ["Garage Vermeulen"],
+    "display_name": "Lars Wouters"
+  },
+  {
+    "username": "sofie",
     "role": "expert",
-    "country": "DE",
-    "display_name": "Klaus Weber"
-  },
-  {
-    "username": "admin_sarah",
-    "password_hash": "$2b$12$NK5o8As5b7M0x3I4z6yZQgST3a9A8x0D1e2F5g6H7i8J9k0L1m2N",
-    "role": "admin",
-    "country": "ALL",
-    "display_name": "Sarah Johnson"
+    "country": "BE",
+    "clients": [],
+    "display_name": "Sofie Maes"
   }
 ]
