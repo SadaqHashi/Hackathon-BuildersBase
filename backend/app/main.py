@@ -1,9 +1,12 @@
-from fastapi import FastAPI, Depends
+from dotenv import load_dotenv
+from fastapi import FastAPI, Depends, Path
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from .schemas import AskRequest, AskResponse
-from .security import login, get_current_user, require_role, validate_input_length
+from .security import login, get_current_user, require_role, validate_question
 from .engine import ask as engine_ask, verify_claim, get_verified_claims
+
+load_dotenv()
 
 app = FastAPI(title="TrustLens")
 
@@ -11,13 +14,13 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:8501"],
     allow_methods=["GET", "POST"],
-    allow_headers=["*"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
 
 class LoginRequest(BaseModel):
-    username: str
-    password: str
+    username: str = Field(max_length=64)
+    password: str = Field(max_length=128)
 
 
 class VerifyRequest(BaseModel):
@@ -37,14 +40,18 @@ def auth_login(req: LoginRequest):
 @app.post("/ask", response_model=AskResponse)
 def ask(req: AskRequest, user: dict = Depends(get_current_user)):
     require_role(user, ["consultant", "expert", "admin"])
-    validate_input_length(req.question)
-    return engine_ask(req.question, user_country=user.get("country", "ALL"))
+    validate_question(req.question)
+    return engine_ask(req.question, user)
 
 
 @app.post("/claims/{claim_id}/verify")
-def verify(claim_id: str, req: VerifyRequest, user: dict = Depends(get_current_user)):
+def verify(
+    req: VerifyRequest,
+    claim_id: str = Path(max_length=64, pattern=r"^[a-z0-9-]+$"),
+    user: dict = Depends(get_current_user),
+):
     require_role(user, ["expert", "admin"])
-    return verify_claim(claim_id, user["username"], req.verified)
+    return verify_claim(claim_id, user, req.verified)
 
 
 @app.get("/claims/verified")

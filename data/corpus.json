@@ -7,6 +7,7 @@
     "updated_at": "2026-06-15",
     "country": "BE",
     "client": null,
+    "supersedes": "pol-be-cutoff-v2",
     "content": "Payroll input for Belgian clients must be received no later than the 5th working day of the month. Enterprise clients (500+ employees) with a signed SLA addendum may submit until the 7th working day. This version replaces v2 (2023)."
   },
   {

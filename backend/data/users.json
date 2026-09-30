@@ -3,21 +3,28 @@
     "username": "jonas",
     "role": "consultant",
     "country": "BE",
-    "clients": ["Brouwerij Delvaux"],
-    "display_name": "Jonas Peeters"
+    "clients": [
+      "Brouwerij Delvaux"
+    ],
+    "display_name": "Jonas Peeters",
+    "password_hash": "pbkdf2_sha256$600000$408176b4347b84b17876cea9b460eb46$9556526423272b9154a15e29f1b4144831c67605457d23fedc736eaa3fd88b42"
   },
   {
     "username": "lars",
     "role": "consultant",
     "country": "BE",
-    "clients": ["Garage Vermeulen"],
-    "display_name": "Lars Wouters"
+    "clients": [
+      "Garage Vermeulen"
+    ],
+    "display_name": "Lars Wouters",
+    "password_hash": "pbkdf2_sha256$600000$6511969cfa1a8a8f93ad8e1317c27254$b56a415cb5f403cddf3523650e929b0273e173ed845d915c8a39bed7a6effbd3"
   },
   {
     "username": "sofie",
     "role": "expert",
     "country": "BE",
     "clients": [],
-    "display_name": "Sofie Maes"
+    "display_name": "Sofie Maes",
+    "password_hash": "pbkdf2_sha256$600000$6f56ca45c076cb34e849e79924bf956f$90821e607db176fe8cfd69c6e02647d6bd7784b10b891afff3c2d22d2c623cf4"
   }
 ]
