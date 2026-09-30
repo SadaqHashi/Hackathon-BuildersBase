@@ -1,4 +1,5 @@
 import json
+import os
 import re
 from pathlib import Path
 from fastapi import HTTPException
@@ -7,6 +8,8 @@ from .trust_score import compute_signals, compute_trust_score, extract_claims, o
 from .claude_service import compare_sources
 
 CORPUS_DIR = Path(__file__).resolve().parent.parent.parent / "data"
+CACHE_DIR = Path(__file__).resolve().parent.parent / "data"
+DEMO_CACHE_FILE = CACHE_DIR / "demo_cache.json"
 
 # Words too common to make a document relevant on their own.
 _STOPWORDS = {
@@ -59,7 +62,26 @@ def _weakest_reason(source: Source) -> str:
     return min(source.signals, key=lambda s: s.score).reason
 
 
+def _load_demo_cache() -> dict:
+    if DEMO_CACHE_FILE.exists():
+        with open(DEMO_CACHE_FILE, encoding="utf-8") as f:
+            return json.load(f)
+    return {}
+
+
+def _save_demo_cache(cache: dict):
+    with open(DEMO_CACHE_FILE, "w", encoding="utf-8") as f:
+        json.dump(cache, f, indent=2)
+
+
 def ask(question: str, user: dict) -> AskResponse:
+    demo_mode = os.getenv("DEMO_MODE", "false").lower() == "true"
+    if demo_mode:
+        cache = _load_demo_cache()
+        cache_key = f"{user['username']}::{question.strip().lower()}"
+        if cache_key in cache:
+            return AskResponse(**cache[cache_key])
+
     visible = [d for d in _load_json("corpus.json") if can_see(d, user)]
     question_terms = _terms(question)
     docs = [d for d in visible if _is_relevant(d, question_terms)]
@@ -74,6 +96,7 @@ def ask(question: str, user: dict) -> AskResponse:
         claims_by_id[doc["id"]] = extract_claims(doc.get("content", ""))
         if superseded_by(doc, docs):
             superseded_ids.add(doc["id"])
+        verification = _verified_claims.get(doc["id"])
         sources.append(Source(
             id=doc["id"],
             title=doc["title"],
@@ -83,6 +106,7 @@ def ask(question: str, user: dict) -> AskResponse:
             source_type=doc["source_type"],
             excerpt=doc.get("content", ""),
             client=doc.get("client"),
+            verified_by=verification["verified_by"] if verification and verification["verified"] else None,
             signals=signals,
             trust_score=compute_trust_score(signals),
         ))
@@ -126,13 +150,19 @@ def ask(question: str, user: dict) -> AskResponse:
     if ai:
         answer += f" {ai.summary}"
 
-    return AskResponse(
+    response = AskResponse(
         answer=answer,
         sources=sources,
         conflicts=conflicts,
         uncertainty=uncertainty,
         contact=contact,
     )
+
+    if demo_mode:
+        cache[cache_key] = response.model_dump()
+        _save_demo_cache(cache)
+
+    return response
 
 
 def _tally(voters: list[Source], claims_by_id: dict, scope: str):

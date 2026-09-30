@@ -9,6 +9,9 @@ from fastapi import HTTPException, Header
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 TOKEN_TTL = timedelta(hours=4)
 _tokens: dict[str, dict] = {}
+_login_attempts: dict[str, list[datetime]] = {}
+MAX_LOGIN_ATTEMPTS = 5
+LOGIN_WINDOW = timedelta(minutes=15)
 
 # Compared against when the username is unknown, so response time doesn't reveal valid users.
 _DUMMY_HASH = "pbkdf2_sha256$600000$" + "00" * 16 + "$" + "00" * 32
@@ -36,10 +39,21 @@ def _purge_expired():
         del _tokens[token]
 
 
+def _check_rate_limit(username: str):
+    now = datetime.now(timezone.utc)
+    attempts = _login_attempts.get(username, [])
+    attempts = [t for t in attempts if now - t < LOGIN_WINDOW]
+    _login_attempts[username] = attempts
+    if len(attempts) >= MAX_LOGIN_ATTEMPTS:
+        raise HTTPException(status_code=429, detail="Too many login attempts. Try again later.")
+
+
 def login(username: str, password: str) -> dict:
+    _check_rate_limit(username)
     user = next((u for u in _load_users() if u["username"] == username), None)
     password_ok = _verify_password(password, user["password_hash"] if user else _DUMMY_HASH)
     if not user or not password_ok:
+        _login_attempts.setdefault(username, []).append(datetime.now(timezone.utc))
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     _purge_expired()

@@ -89,5 +89,95 @@
     "country": "BE",
     "client": "Garage Vermeulen",
     "content": "SME client, 45 employees. Standard cutoff applies. Contact person: An Claes."
+  },
+  {
+    "id": "pol-be-holiday",
+    "title": "Holiday Pay Policy - Belgium",
+    "source_type": "policy",
+    "owner": "Compensation & Benefits BE",
+    "updated_at": "2026-01-15",
+    "country": "BE",
+    "client": null,
+    "content": "Belgian employees are entitled to double holiday pay, calculated at 92% of gross monthly salary. Payment is due in June for white-collar workers and by the holiday fund for blue-collar workers."
+  },
+  {
+    "id": "pol-be-meal-vouchers",
+    "title": "Meal Voucher Regulations - Belgium",
+    "source_type": "policy",
+    "owner": "Compensation & Benefits BE",
+    "updated_at": "2025-12-01",
+    "country": "BE",
+    "client": null,
+    "content": "Maximum employer contribution per meal voucher is EUR 6.91. Employee minimum contribution is EUR 1.09. Vouchers are granted per effective working day. Part-time employees receive proportional entitlements."
+  },
+  {
+    "id": "wiki-company-car",
+    "title": "Company Car FAQ",
+    "source_type": "wiki",
+    "owner": null,
+    "updated_at": "2025-06-20",
+    "country": "BE",
+    "client": null,
+    "content": "The benefit in kind for company cars is calculated using the catalogue value, CO2 emissions and age of the vehicle. The minimum BIK is EUR 1,600/year. Fuel cards are taxed separately."
+  },
+  {
+    "id": "pol-be-sick-leave",
+    "title": "Guaranteed Salary During Illness - Belgium",
+    "source_type": "policy",
+    "owner": "HR Operations BE",
+    "updated_at": "2026-03-10",
+    "country": "BE",
+    "client": null,
+    "content": "White-collar employees receive guaranteed salary for 30 calendar days of illness. A medical certificate must be submitted within 2 working days. After guaranteed salary, the mutual fund takes over."
+  },
+  {
+    "id": "email-onboarding-checklist",
+    "title": "Onboarding payroll checklist",
+    "source_type": "email",
+    "owner": "HR Operations BE",
+    "updated_at": "2026-07-05",
+    "country": "BE",
+    "client": null,
+    "content": "For new hires: collect DIMONA declaration, bank account, tax withholding form, meal voucher preference and mobility budget choice before the 1st working day. Payroll registration must be completed by the 3rd working day of the start month."
+  },
+  {
+    "id": "pol-be-mobility",
+    "title": "Mobility Budget - Belgium",
+    "source_type": "policy",
+    "owner": "Compensation & Benefits BE",
+    "updated_at": "2026-02-28",
+    "country": "BE",
+    "client": null,
+    "content": "Employees eligible for a company car may opt for the mobility budget (three pillars). Pillar 1: eco-friendly company car. Pillar 2: sustainable transport (public transport, bicycle, housing near work). Pillar 3: cash (heavily taxed). The budget equals the total cost of ownership of the reference car."
+  },
+  {
+    "id": "chat-teams-holiday",
+    "title": "Teams #hr-belgium",
+    "source_type": "chat",
+    "owner": "Lars Wouters",
+    "updated_at": "2026-09-15",
+    "country": "BE",
+    "client": null,
+    "content": "Quick question: is double holiday pay still 92%? I heard it might change to 85% next year but not sure where I read that."
+  },
+  {
+    "id": "pol-nl-sick-leave",
+    "title": "Sick Leave Policy - Netherlands",
+    "source_type": "policy",
+    "owner": "HR Operations NL",
+    "updated_at": "2026-01-20",
+    "country": "NL",
+    "client": null,
+    "content": "Dutch employers must continue paying at least 70% of salary during the first two years of illness. In the first year, the minimum is the statutory minimum wage. A company doctor (bedrijfsarts) must be consulted within 6 weeks."
+  },
+  {
+    "id": "wiki-payslip-codes",
+    "title": "Payslip code reference",
+    "source_type": "wiki",
+    "owner": null,
+    "updated_at": "2024-03-12",
+    "country": "BE",
+    "client": null,
+    "content": "Common payslip codes: 1000 = base salary, 1200 = overtime, 2000 = meal vouchers, 2100 = eco-cheques, 3000 = company car BIK, 4000 = holiday pay (single), 4100 = holiday pay (double), 5000 = net expense allowance."
   }
 ]

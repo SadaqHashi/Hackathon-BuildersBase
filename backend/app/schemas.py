@@ -17,6 +17,7 @@ class Source(BaseModel):
     source_type: str   # policy, manual, chat, email, wiki, client_note
     excerpt: str
     client: str | None = None
+    verified_by: str | None = None
     signals: list[Signal]
     trust_score: float
 
