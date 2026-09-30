@@ -57,23 +57,27 @@ Expert for verification: Sofie Maes (Payroll Compliance Lead BE).
 ## Repo structure (current)
 ```
 .gitignore / .env.example / README.md / CLAUDE.md
+docker-compose.yml      backend + frontend containers
 backend/
+  Dockerfile            Python 3.13-slim, uvicorn on port 8000
   requirements.txt      fastapi, uvicorn, python-dotenv, google-genai, pytest, httpx
-  app/schemas.py        contract: AskRequest, Signal, Source (incl client field), Conflict, AskResponse
+  app/schemas.py        contract: AskRequest, Signal, Source (client + verified_by), Conflict, AskResponse
   app/main.py           /health, /auth/login, /ask, /claims/{id}/verify, /claims/verified; CORS 8501
-  app/security.py       PBKDF2 password hashes, in-memory bearer tokens (4h), require_role, input validation
+  app/security.py       PBKDF2 hashes, bearer tokens (4h), role checks, input validation, rate limiting
   app/trust_score.py    deterministic claim extraction (regex) + 5 signals: recency (incl. supersession),
                         ownership, source_type, scope_match, corroboration (claim-based, independent owners)
   app/engine.py         client-based access filter, keyword retrieval, deterministic answer, claim-based
-                        conflicts, uncertainty text, contact (never the asker)
+                        conflicts, uncertainty text, contact (never the asker), DEMO_MODE caching,
+                        verified_by shown on sources after expert verification
   app/claude_service.py Gemini explanation only (model via GEMINI_MODEL), JSON cache; returns None without key
   data/users.json       Jonas (consultant, Delvaux), Lars (consultant, Vermeulen), Sofie (expert); PBKDF2 hashes
   data/ai_cache.json    cached AI responses for demo resilience
+  data/demo_cache.json  DEMO_MODE cached responses (auto-populated)
 data/
-  corpus.json           Delvaux scenario, 9 docs: id, title, source_type, owner, updated_at, country, client,
-                        content, optional supersedes (id of the doc it replaces)
+  corpus.json           18 docs: 9 cutoff scenario (Delvaux traps) + 9 filler (holiday pay, meal vouchers,
+                        company car, sick leave, onboarding, mobility budget, payslip codes)
   experts.json          people lookup for "who to ask"
-tests/                  run from repo root: backend\.venv\Scripts\python.exe -m pytest -q
+tests/                  run: py -m pytest tests/ -v
   test_security.py      auth, RBAC, real IDOR (client filter), input validation, demo scenario
   test_trust_score.py   claim extraction and every signal
 frontend/               not started
@@ -103,6 +107,12 @@ Done:
 10. Client-based access control (Jonas never sees Vermeulen docs), PBKDF2 login, strict Bearer parsing,
     CORS headers restricted, empty question rejected, verify endpoint checks claim exists + not own source
 11. 37 passing tests
+12. Filler docs: 9 non-cutoff docs (holiday pay, meal vouchers, company car, sick leave, onboarding,
+    mobility budget, payslip codes, NL sick leave, holiday chat rumor) — corpus now 18 docs
+13. DEMO_MODE=true caches full /ask responses in demo_cache.json so demo works without GCP credits
+14. Login rate limiting: 5 attempts per 15 min per username (429 on exceed)
+15. Expert verification flip: verified_by field on Source, /ask shows who verified each source
+16. docker-compose.yml + backend/Dockerfile for containerized deployment
 
 How the answer is decided (deterministic, no LLM):
 - Voters = sources that are owned, not superseded, in scope (scope_match >= 0.7) and not contradicted-and-unbacked
@@ -110,54 +120,26 @@ How the answer is decided (deterministic, no LLM):
 - Per claimed value, sum voters' trust; highest wins. Everything else is listed under "Not relied on" with its weakest signal
 
 ## Still open
-- **Expert verification has no visible effect.** `/claims/{id}/verify` stores the verdict, but `/ask` ignores it.
-  The "uncertain -> trusted" flip needs `verified_by: str | None = None` on `Source` (schema change, needs both sides).
 - **Claim extraction is a regex** for "Nth" ordinals tagged general/enterprise. Works for cutoff questions only.
-  Filler docs with other ordinals (e.g. "paid by the 25th") would create false claims and conflicts.
+  Filler docs with other ordinals (e.g. "paid by the 25th") could create false claims and conflicts.
   Replace or back it with LLM extraction (roadmap 5); keep the regex as the DEMO_MODE fallback.
 - **Retrieval is keyword overlap** (stopwords removed), no relevance ranking.
-- **Demo password is the weak shared "hackathon"**, now hashed in users.json instead of hardcoded, but still weak.
+- **Demo password is the weak shared "hackathon"**, hashed but still weak.
 - **Duplicate titles:** two chats are both "Teams #payroll-be". The UI must show owner + date next to titles.
-- **No login rate limiting**; token store is in-memory (lost on restart).
+- **Token store is in-memory** (lost on restart). Acceptable for hackathon.
 - **Gemini model unverified:** default `GEMINI_MODEL=gemini-2.5-flash`; check it is available on our GCP account.
-  Also check whether a plain `GOOGLE_API_KEY` bills the GCP credits or whether we need Vertex AI (GCP_PROJECT_ID).
-- **Filler docs** (8-10) still pending in corpus.json so retrieval isn't trivial.
-- **Not committed yet:** all trust-logic and security changes are local on `main`. Put them on a branch + PR.
-
-## For Sadaq (read before pulling)
-Adrian's session rewrote parts of the backend you own. Summary of what changed and why:
-- `trust_score.py`: rewritten. Old corroboration counted "another source of the same type" as support, so the wrong
-  "10th now" chat scored 0.79 (above the correct email) and superseded v2 was "corroborated" by v3.
-  Now: regex claim extraction, corroboration = same claimed value from a different owner, new `scope_match` signal,
-  supersession via `supersedes` field in corpus.json, chat authors are not accountable owners, recency weight 0.10.
-- `engine.py`: rewritten. `ask(question, user)` now takes the whole session user (was `user_country`).
-  Adds client-based access filter (IDOR fix), keyword retrieval, deterministic answer, claim-based conflicts,
-  uncertainty text listing what was not relied on and why, contact is never the asker.
-  NL docs are no longer filtered out; they are shown with scope_match 0.0 so the "wrong country" trap is visible.
-  `verify_claim(claim_id, user, verified)` now takes the user dict, returns 404 for unknown/invisible ids
-  and 403 when an expert verifies their own source. Claim ids are corpus doc ids.
-- `claude_service.py`: bug fix, it read `excerpt` but the corpus field is `content`, so Gemini got empty text.
-  Now receives scored `Source` objects with signals, is told not to re-rank, returns `None` without key
-  (old generic fallback said "rely on the official policy", which is wrong for Delvaux). Model via `GEMINI_MODEL`.
-- `security.py`: PBKDF2 hashes in users.json replace the hardcoded password check (same demo password),
-  strict `Bearer` parsing, expired-token purge. `validate_input_length` renamed to `validate_question` (also rejects empty).
-- `main.py`: `load_dotenv()`, CORS headers limited, login field max lengths, claim_id path pattern.
-- `users.json`: real PBKDF2 hashes (the old bcrypt-looking hashes were fake and unused).
-- Tests: 37 passing. Old `TestIDOR` did not test access; replaced with real client-filter tests.
-  `test_empty_question` now expects 400. Demo scenario tests assert the 7th answer and the chat ranking.
-- `schemas.py`: NOT changed. Proposal to agree on: add `verified_by` to `Source` for the verification flip.
 
 ## Remaining roadmap
 1. ~~Connect Aikido account + repo~~
 2. ~~Switch backend to Delvaux scenario~~ DONE
-3. ~~Retrieval + scoring, scope_match, claim-based corroboration~~ DONE (basic)
-4. Frontend (Streamlit): one answer screen against /ask  <- NEXT
-5. LLM layer: claim extraction, conflict detection, explained answer via Gemini
-6. ~~Role-based access: consultants only see their own clients' docs~~ DONE
+3. ~~Retrieval + scoring, scope_match, claim-based corroboration~~ DONE
+4. Frontend (Streamlit): one answer screen against /ask  <- NEXT (Person 2)
+5. LLM layer: claim extraction via Gemini (optional, regex works for demo)
+6. ~~Role-based access: IDOR client filter~~ DONE
 7. FIRST Aikido AI Code Audit = "before" screenshot
-8. DEMO_MODE=true: cached responses for demo questions so the repo works after GCP credits expire (1 week)
+8. ~~DEMO_MODE~~ DONE (set DEMO_MODE=true in .env)
 9. Fix Aikido findings, rescan = "after" screenshot (reserve 1 hour+)
-10. docker-compose + README with "unfinished" section
+10. ~~docker-compose~~ DONE + README with "unfinished" section
 11. Feature freeze ~90 min before deadline, record video, submit
 
 ## Login credentials (demo)
@@ -175,8 +157,9 @@ All users use password `hackathon`. Usernames: `jonas`, `lars`, `sofie`.
 ## Security notes (Aikido checks business logic, IDOR, authn, authz)
 - CORS restricted to localhost:8501, headers limited to Authorization + Content-Type
 - Access control enforced server-side from the session, never from request params
-- Passwords: PBKDF2-SHA256 (600k iterations) in users.json, constant-time compare, dummy hash for unknown users.
-  Demo password is still the weak shared "hackathon" (documented, not in code).
+- Passwords: PBKDF2-SHA256 (600k iterations) in users.json, constant-time compare, dummy hash for unknown users
+- Login rate limiting: 5 failed attempts per 15 min per username (returns 429)
 - Input validated: /ask question non-empty and max 2000 chars, login field lengths, claim_id pattern
 - Source text is sanitized and delimited before it goes into the Gemini prompt
+- Expert cannot verify own source (403)
 - No keys in code or history
