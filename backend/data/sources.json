@@ -1,0 +1,38 @@
+[
+  {
+    "id": "doc-1",
+    "title": "DE Payroll Policy 2026",
+    "owner": "Payroll DE",
+    "updated_at": "2026-07-01",
+    "country": "DE",
+    "source_type": "policy",
+    "excerpt": "Final settlement must be completed within 30 calendar days after the last working day."
+  },
+  {
+    "id": "doc-2",
+    "title": "DE Payroll Handbook (Internal)",
+    "owner": "HR Germany",
+    "updated_at": "2025-11-15",
+    "country": "DE",
+    "source_type": "manual",
+    "excerpt": "Payroll deadlines for terminations: 45 days for standard contracts, 30 days for fixed-term."
+  },
+  {
+    "id": "chat-7",
+    "title": "Teams chat: Payroll DE sync",
+    "owner": null,
+    "updated_at": "2026-09-12",
+    "country": "DE",
+    "source_type": "chat",
+    "excerpt": "Maria said the deadline was extended to 45 days starting Q3 2026."
+  },
+  {
+    "id": "email-3",
+    "title": "Email from Legal DE",
+    "owner": "Legal DE",
+    "updated_at": "2026-08-20",
+    "country": "DE",
+    "source_type": "email",
+    "excerpt": "Please note: the 30-day settlement rule remains in effect. No extension has been approved."
+  }
+]
