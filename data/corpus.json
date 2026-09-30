@@ -78,7 +78,28 @@
     "updated_at": "2026-03-01",
     "country": "BE",
     "client": "Brouwerij Delvaux",
+    "supersedes": "client-note-delvaux-2024",
     "content": "Enterprise client, 620 employees. SLA addendum signed 2026-02-20: payroll input cutoff is the 7th working day."
+  },
+  {
+    "id": "client-note-delvaux-2024",
+    "title": "Client file - Brouwerij Delvaux (2024)",
+    "source_type": "client_note",
+    "owner": "Jonas Peeters",
+    "updated_at": "2024-04-18",
+    "country": "BE",
+    "client": "Brouwerij Delvaux",
+    "content": "Enterprise client, 540 employees. SLA addendum 2024: payroll input cutoff is the 6th working day."
+  },
+  {
+    "id": "chat-teams-vermeulen",
+    "title": "Teams #payroll-be",
+    "source_type": "chat",
+    "owner": "Pieter Claes",
+    "updated_at": "2026-09-10",
+    "country": "BE",
+    "client": "Garage Vermeulen",
+    "content": "For Garage Vermeulen we can take input until the 7th as well I think, they asked for more time last month."
   },
   {
     "id": "client-note-vermeulen",

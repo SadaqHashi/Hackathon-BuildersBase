@@ -1,4 +1,4 @@
-﻿"""TrustLens answer screen.
+"""TrustLens answer screen.
 
 Security note: everything shown comes from documents or the API and is untrusted. Every value that goes into
 HTML passes through esc() first; nothing from the API is ever rendered as raw HTML or markdown.
@@ -15,6 +15,7 @@ st.set_page_config(page_title="TrustLens", layout="wide")
 DEMO_QUESTIONS = [
     "What's the payroll input cutoff for Brouwerij Delvaux?",
     "What's the payroll input cutoff for Garage Vermeulen?",
+    "What's the general payroll input cutoff?",
 ]
 SIGNAL_LABELS = {
     "recency": "Recency",
@@ -231,7 +232,7 @@ def render_conflicts(conflicts: list[dict]):
 
 def render_source(rank: int, s: dict, status, verification: dict | None, is_expert: bool):
     lvl = level(s["trust_score"])
-    meta = " Â· ".join(esc(x) for x in (
+    meta = " · ".join(esc(x) for x in (
         TYPE_LABELS.get(s["source_type"], s["source_type"]),
         s["owner"] or "No owner",
         f"updated {s['updated_at']}",
@@ -293,6 +294,7 @@ def main():
 
     with st.form("ask"):
         question = st.selectbox("Your question", DEMO_QUESTIONS, index=0, accept_new_options=True)
+        st.caption("Pick a question or type your own. This proof of concept covers payroll input cutoffs only.")
         submitted = st.form_submit_button("Ask", type="primary")
     if submitted and question:
         with st.spinner("Checking sources..."):

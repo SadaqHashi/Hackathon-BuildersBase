@@ -34,6 +34,15 @@ Traps in `data/corpus.json` (all fictional internal process, not real law):
 - Compliance email from Sofie Maes confirms v3 change
 - Client note Delvaux: authoritative source for the exception
 - Client note Garage Vermeulen belongs to Lars Wouters: Jonas must NOT see it (IDOR demo)
+- Old Delvaux client file (2024) says 6th: superseded by the current client file (`supersedes`), shows as a
+  second conflict "Enterprise addendum cutoff: 6th (superseded) vs 7th"
+- Teams chat by Pieter Claes (Garage Vermeulen) says "7th as well I think": client-specific but unbacked and
+  contradicted. Lars's demo moment: answer stays the 5th. Jonas never sees it (client filter).
+
+Demo questions (frontend dropdown, all verified):
+- jonas: "What's the payroll input cutoff for Brouwerij Delvaux?" -> 7th, 2 conflicts
+- lars: "What's the payroll input cutoff for Garage Vermeulen?" -> 5th, Pieter's chat not relied on
+- anyone: "What's the general payroll input cutoff?" -> 5th
 
 Expert for verification: Sofie Maes (Payroll Compliance Lead BE).
 
@@ -69,6 +78,14 @@ Expert for verification: Sofie Maes (Payroll Compliance Lead BE).
    `uncertainty_level: "low" | "medium" | "high"`. Optional, additive schema change.
 4. Rejected verifications are not in /ask (`verified_by` only set when verified=True). Frontend reads
    `/claims/verified` for now, so this is low priority.
+5. **Non-cutoff questions give wrong answers.** Claim extraction only knows "Nth" ordinals, so e.g.
+   "What is the max meal voucher contribution?" answers "The 1st working day" (from the onboarding email) and
+   "When must payroll registration be done for a new hire?" answers "The 5th" (should be the 3rd).
+   Frontend now says "covers payroll input cutoffs only". Decision (Adrian): stay in the cutoff domain for the demo.
+6. **One document conflicting with itself:** the onboarding email states the 1st and the 3rd working day
+   (two different deadlines) and shows up as a conflict "1st vs 3rd" with only that email on both sides.
+7. **Retrieval noise:** "...cutoff in Belgium?" pulls in holiday pay, meal vouchers, sick leave and mobility policies
+   because "Belgium" is in their titles. Demo list uses "What's the general payroll input cutoff?" instead.
 
 ## Repo structure (current)
 ```
