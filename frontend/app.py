@@ -10,7 +10,7 @@ import streamlit as st
 
 import api
 
-st.set_page_config(page_title="TrustLens", layout="wide")
+st.set_page_config(page_title="TrustLens", layout="centered")
 
 DEMO_QUESTIONS = [
     "What's the payroll input cutoff for Brouwerij Delvaux?",
@@ -18,11 +18,11 @@ DEMO_QUESTIONS = [
     "What's the general payroll input cutoff?",
 ]
 SIGNAL_LABELS = {
-    "recency": "Recency",
-    "ownership": "Ownership",
-    "source_type": "Source type",
-    "scope_match": "Scope",
-    "corroboration": "Corroboration",
+    "recency": "Up to date",
+    "ownership": "Owner",
+    "source_type": "Kind of source",
+    "scope_match": "Applies to you",
+    "corroboration": "Backed by others",
 }
 TYPE_LABELS = {
     "policy": "Policy",
@@ -32,43 +32,52 @@ TYPE_LABELS = {
     "wiki": "Wiki",
     "chat": "Chat",
 }
-_ORDINAL = re.compile(r"\b\d{1,2}(?:st|nd|rd|th)\b")
+# Traffic-light groups, in display order.
+GROUPS = {
+    "green": ("Safe to rely on", "Used for the answer and well supported.", ":material/verified:", True),
+    "orange": ("Check before using", "Relevant, but informal or not decisive on its own.", ":material/warning:", False),
+    "red": ("Don't rely on", "Outdated, wrong scope, unowned or contradicted.", ":material/block:", False),
+}
+TRUSTED = 0.75
 
 CSS = """
 <style>
-.block-container {padding-top: 2rem; max-width: 1150px;}
-.tl-brand {font-size: 1.9rem; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 0;}
-.tl-tagline {color: #59636e; margin-top: 0.1rem; margin-bottom: 1.2rem;}
-.tl-card {background: #fff; border: 1px solid #d8dee4; border-radius: 12px; padding: 1.1rem 1.3rem; margin-bottom: 0.9rem;}
-.tl-answer {border-left: 5px solid #2f5bea;}
-.tl-label {font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #59636e; margin-bottom: 0.35rem;}
-.tl-headline {font-size: 1.55rem; font-weight: 700; line-height: 1.25; margin-bottom: 0.4rem;}
+.block-container {padding-top: 2.2rem;}
+.tl-brand {font-size: 1.8rem; font-weight: 700; letter-spacing: -0.02em;}
+.tl-tagline {color: #59636e; margin: 0.1rem 0 1.4rem 0;}
+.tl-answer {background: #fff; border: 1px solid #d8dee4; border-left: 5px solid #2f5bea; border-radius: 12px;
+  padding: 1.2rem 1.4rem; margin: 0.4rem 0 0.8rem 0;}
+.tl-label {font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #59636e;}
+.tl-headline {font-size: 1.6rem; font-weight: 700; line-height: 1.25; margin: 0.25rem 0 0.4rem 0;}
 .tl-sub {color: #31373d; line-height: 1.5;}
-.tl-pill {display: inline-block; padding: 0.15rem 0.6rem; border-radius: 999px; font-size: 0.8rem; font-weight: 600;}
-.tl-good {background: #dafbe1; color: #116329;}
-.tl-mid {background: #fff4c5; color: #7d4e00;}
-.tl-bad {background: #ffebe9; color: #a40e26;}
+.tl-facts {display: flex; flex-wrap: wrap; gap: 0.5rem 1.4rem; margin-top: 0.9rem; padding-top: 0.8rem;
+  border-top: 1px solid #eef1f4; font-size: 0.92rem;}
+.tl-facts b {color: #1f2328;}
+.tl-pill {display: inline-block; padding: 0.1rem 0.55rem; border-radius: 999px; font-size: 0.8rem; font-weight: 600;}
+.tl-green {background: #dafbe1; color: #116329;}
+.tl-orange {background: #fff1d6; color: #8a4b00;}
+.tl-red {background: #ffebe9; color: #a40e26;}
 .tl-neutral {background: #eef1f4; color: #424a53;}
-.tl-conflict {border-left: 5px solid #d4a72c; background: #fffdf3;}
-.tl-crow {display: flex; gap: 0.7rem; align-items: baseline; padding: 0.3rem 0; border-top: 1px dashed #eadfb8;}
+.tl-tally {display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 0.2rem 0 0.2rem 0;}
+.tl-src {background: #fff; border: 1px solid #d8dee4; border-radius: 10px; padding: 0.8rem 1rem; margin-bottom: 0.6rem;}
+.tl-src-green {border-left: 4px solid #2da44e;}
+.tl-src-orange {border-left: 4px solid #d4a72c;}
+.tl-src-red {border-left: 4px solid #cf222e;}
+.tl-src-top {display: flex; justify-content: space-between; gap: 1rem; align-items: flex-start;}
+.tl-src-title {font-weight: 650;}
+.tl-meta {color: #59636e; font-size: 0.83rem; margin-top: 0.1rem;}
+.tl-why {margin-top: 0.45rem; font-size: 0.92rem; color: #31373d;}
+.tl-src details {margin-top: 0.5rem;}
+.tl-src summary {cursor: pointer; color: #2f5bea; font-size: 0.85rem;}
+.tl-sigrow {display: flex; gap: 0.5rem; align-items: baseline; font-size: 0.85rem; padding: 0.2rem 0;}
+.tl-sigrow b {min-width: 8.5rem;}
+.tl-dot {width: 0.6rem; height: 0.6rem; border-radius: 50%; display: inline-block; flex-shrink: 0;}
+.tl-dot-green {background: #2da44e;} .tl-dot-orange {background: #d4a72c;} .tl-dot-red {background: #cf222e;}
+.tl-quote {margin-top: 0.5rem; padding: 0.5rem 0.75rem; background: #f6f8fa; border-radius: 8px;
+  font-size: 0.88rem; color: #31373d; white-space: pre-wrap;}
+.tl-crow {display: flex; gap: 0.8rem; padding: 0.3rem 0; border-top: 1px dashed #e4e8ec; font-size: 0.92rem;}
 .tl-crow:first-of-type {border-top: none;}
-.tl-cval {min-width: 3.2rem; font-weight: 700;}
-.tl-rejected {margin: 0.2rem 0 0 0; padding-left: 1.1rem; color: #31373d;}
-.tl-rejected li {margin-bottom: 0.25rem;}
-.tl-src-head {display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;}
-.tl-src-title {font-weight: 700; font-size: 1.05rem;}
-.tl-meta {color: #59636e; font-size: 0.85rem; margin-top: 0.15rem;}
-.tl-score {font-size: 1.5rem; font-weight: 700; line-height: 1;}
-.tl-score-cap {font-size: 0.7rem; color: #59636e; text-align: right;}
-.tl-bar {height: 6px; background: #eef1f4; border-radius: 3px; margin: 0.6rem 0 0.7rem 0; overflow: hidden;}
-.tl-bar > div {height: 100%; border-radius: 3px;}
-.tl-bar-good {background: #2da44e;} .tl-bar-mid {background: #d4a72c;} .tl-bar-bad {background: #cf222e;}
-.tl-signals {display: flex; flex-wrap: wrap; gap: 0.4rem;}
-.tl-sig {border-radius: 8px; padding: 0.3rem 0.55rem; font-size: 0.8rem; line-height: 1.3; max-width: 100%;}
-.tl-sig b {margin-right: 0.3rem;}
-.tl-quote {margin-top: 0.75rem; padding: 0.55rem 0.8rem; background: #f6f8fa; border-radius: 8px; color: #31373d; font-size: 0.9rem; white-space: pre-wrap;}
-.tl-status {margin-top: 0.6rem; font-size: 0.85rem;}
-.tl-muted {opacity: 0.72;}
+.tl-cval {min-width: 3rem; font-weight: 700;}
 </style>
 """
 
@@ -77,12 +86,12 @@ def esc(value) -> str:
     return html.escape(str(value if value is not None else ""), quote=True)
 
 
-def level(score: float) -> str:
-    if score >= 0.75:
-        return "good"
+def color(score: float) -> str:
+    if score >= TRUSTED:
+        return "green"
     if score >= 0.4:
-        return "mid"
-    return "bad"
+        return "orange"
+    return "red"
 
 
 # ---------- parsing the backend's prose into structure ----------
@@ -114,15 +123,25 @@ def parse_backers(answer_rest: str) -> list[str]:
     return [t.strip() for t in m.group(1).split(", ")] if m else []
 
 
-def source_status(source: dict, rejected: list[dict], backers: list[str]) -> tuple[str, str] | None:
-    """Two chats share a title, so match rejected items on title AND the claimed value in the text."""
+def classify(source: dict, rejected: list[dict], backers: list[str]) -> tuple[str, str]:
+    """Traffic-light group + one plain-language reason.
+
+    Several chats share a title, so a rejected item only matches a source with the same title whose weakest
+    signal is exactly the stated reason (the backend reports the weakest signal as the reason).
+    """
+    weakest = min(source["signals"], key=lambda s: s["score"])
     for r in rejected:
-        values = _ORDINAL.findall(r["claim"])
-        if r["title"] == source["title"] and all(v in source["excerpt"] for v in values):
-            return "bad", f"Not relied on: {r['reason']}"
+        if r["title"] == source["title"] and r["reason"] == weakest["reason"]:
+            return "red", f"Says {r['claim']}, but: {r['reason']}"
     if source["title"] in backers:
-        return "good", "Supports the answer"
-    return None
+        if source["trust_score"] >= TRUSTED:
+            reasons = {s["name"]: s for s in source["signals"]}
+            parts = [reasons[n]["reason"] for n in ("source_type", "ownership") if n in reasons]
+            if reasons.get("scope_match", {}).get("score", 0) >= 1.0:
+                parts.append(reasons["scope_match"]["reason"])
+            return "green", " · ".join(parts)
+        return "orange", f"Supports the answer, but: {weakest['reason']}"
+    return "orange", f"Not used for this answer. {weakest['reason']}"
 
 
 # ---------- session ----------
@@ -155,20 +174,21 @@ def refresh_verified():
 
 def render_sidebar():
     with st.sidebar:
-        st.markdown("### Sign in")
         if "flash" in st.session_state:
             st.warning(st.session_state.pop("flash"))
         if "token" in st.session_state:
             user = st.session_state["user"]
+            st.markdown("**Signed in as**")
             st.text(f"{user['display_name']} ({user['role']})")
             if st.button("Sign out", width="stretch"):
                 logout()
                 st.rerun()
         else:
+            st.markdown("### Sign in")
             with st.form("login"):
                 username = st.text_input("Username", placeholder="jonas, lars or sofie")
                 password = st.text_input("Password", type="password")
-                if st.form_submit_button("Sign in", width="stretch"):
+                if st.form_submit_button("Sign in", width="stretch", type="primary"):
                     try:
                         data = api.login(username.strip(), password)
                     except api.ApiError as e:
@@ -178,100 +198,82 @@ def render_sidebar():
                         st.session_state["user"] = {"display_name": data["display_name"], "role": data["role"]}
                         st.rerun()
         st.divider()
-        st.caption("Trust scores are computed by code from document metadata. "
+        st.caption("Trust is computed by code from each document's metadata: how recent it is, who owns it, "
+                   "what kind of source it is, whether it applies to you and whether other sources back it. "
                    "The AI only explains; it never decides what to trust.")
 
 
-def render_answer(result: dict, rejected: list[dict], lvl: str, summary: str, confirm: str | None):
+def render_answer(result: dict, lvl: str, summary: str, confirm: str | None, tally: dict[str, int]):
     headline, rest = split_answer(result["answer"])
-    lvl_class = {"low": "good", "medium": "mid", "high": "bad"}.get(lvl.lower(), "neutral")
-    contact = result.get("contact")
+    # The source list already shows what backs the answer; keep only the extra context sentence(s).
+    rest = re.sub(r"Backed by \d+ source\(s\): .*?\.(?: |$)", "", rest).strip()
+    lvl_class = {"low": "green", "medium": "orange", "high": "red"}.get(lvl.lower(), "neutral")
+    who = confirm or result.get("contact") or "No one identified"
 
-    left, right = st.columns([2.2, 1])
-    with left:
-        st.markdown(
-            f'<div class="tl-card tl-answer"><div class="tl-label">Answer</div>'
-            f'<div class="tl-headline">{esc(headline)}</div>'
-            f'<div class="tl-sub">{esc(rest)}</div></div>',
-            unsafe_allow_html=True,
-        )
-    with right:
-        who = esc(confirm or contact or "No one identified")
-        st.markdown(
-            f'<div class="tl-card"><div class="tl-label">Uncertainty</div>'
-            f'<span class="tl-pill tl-{lvl_class}">{esc(lvl or "Unknown")}</span>'
-            f'<div class="tl-sub" style="margin-top:0.5rem">{esc(summary)}</div></div>'
-            f'<div class="tl-card"><div class="tl-label">Who to ask</div>'
-            f'<div class="tl-sub"><b>{who}</b></div></div>',
-            unsafe_allow_html=True,
-        )
-
-    if rejected:
-        items = "".join(
-            f'<li><b>{esc(r["title"])}</b> says {esc(r["claim"])}: {esc(r["reason"])}</li>' for r in rejected
-        )
-        st.markdown(
-            f'<div class="tl-card"><div class="tl-label">Not relied on, and why</div>'
-            f'<ul class="tl-rejected">{items}</ul></div>',
-            unsafe_allow_html=True,
-        )
+    st.markdown(
+        f'<div class="tl-answer"><div class="tl-label">Answer</div>'
+        f'<div class="tl-headline">{esc(headline)}</div>'
+        + (f'<div class="tl-sub">{esc(rest)}</div>' if rest else "")
+        + f'<div class="tl-facts">'
+        f'<span>Uncertainty: <span class="tl-pill tl-{lvl_class}">{esc(lvl or "Unknown")}</span> {esc(summary)}</span>'
+        f'<span>Not sure? Ask <b>{esc(who)}</b></span>'
+        f'</div></div>',
+        unsafe_allow_html=True,
+    )
+    pills = "".join(
+        f'<span class="tl-pill tl-{g}">{n} {GROUPS[g][0].lower()}</span>' for g, n in tally.items() if n
+    )
+    st.markdown(f'<div class="tl-tally">{pills}</div>', unsafe_allow_html=True)
 
 
 def render_conflicts(conflicts: list[dict]):
-    for c in conflicts:
-        rows = []
-        for part in c["description"].split("; "):
-            value, _, who = part.partition(": ")
-            rows.append(f'<div class="tl-crow"><span class="tl-cval">{esc(value)}</span><span>{esc(who)}</span></div>')
-        st.markdown(
-            f'<div class="tl-card tl-conflict"><div class="tl-label">Conflict surfaced: {esc(c["claim"])}</div>'
-            f'{"".join(rows)}</div>',
-            unsafe_allow_html=True,
-        )
+    if not conflicts:
+        return
+    label = f"Sources disagree on {len(conflicts)} point{'s' if len(conflicts) > 1 else ''}. See who says what"
+    with st.expander(label, icon=":material/compare_arrows:"):
+        for c in conflicts:
+            rows = []
+            for part in c["description"].split("; "):
+                value, _, who = part.partition(": ")
+                rows.append(f'<div class="tl-crow"><span class="tl-cval">{esc(value)}</span><span>{esc(who)}</span></div>')
+            st.markdown(f'<div class="tl-label" style="margin-top:0.4rem">{esc(c["claim"])}</div>{"".join(rows)}',
+                        unsafe_allow_html=True)
 
 
-def render_source(rank: int, s: dict, status, verification: dict | None, is_expert: bool):
-    lvl = level(s["trust_score"])
+def render_source(s: dict, group: str, why: str, verification: dict | None, is_expert: bool):
     meta = " · ".join(esc(x) for x in (
         TYPE_LABELS.get(s["source_type"], s["source_type"]),
         s["owner"] or "No owner",
-        f"updated {s['updated_at']}",
-        s["country"],
-        s.get("client"),
-    ) if x)
-    signals = "".join(
-        f'<span class="tl-sig tl-{level(sig["score"])}"><b>{esc(SIGNAL_LABELS.get(sig["name"], sig["name"]))}</b>'
-        f'{esc(sig["reason"])}</span>'
+        s["updated_at"],
+        s.get("client") or s["country"],
+    ))
+    signal_rows = "".join(
+        f'<div class="tl-sigrow"><span class="tl-dot tl-dot-{color(sig["score"])}"></span>'
+        f'<b>{esc(SIGNAL_LABELS.get(sig["name"], sig["name"]))}</b><span>{esc(sig["reason"])}</span></div>'
         for sig in s["signals"]
     )
-    badges = []
-    if status:
-        badges.append(f'<span class="tl-pill tl-{status[0]}">{esc(status[1])}</span>')
-    if verification:
-        ok = verification.get("verified")
-        badges.append(
-            f'<span class="tl-pill tl-{"good" if ok else "bad"}">'
-            f'{"Verified" if ok else "Rejected"} by expert ({esc(verification.get("verified_by"))})</span>'
-        )
-    elif s.get("verified_by"):
-        badges.append(f'<span class="tl-pill tl-good">Verified by expert ({esc(s["verified_by"])})</span>')
-    status_html = f'<div class="tl-status">{" ".join(badges)}</div>' if badges else ""
-    muted = " tl-muted" if status and status[0] == "bad" else ""
+    verified_by = (verification or {}).get("verified_by") or s.get("verified_by")
+    if verification and not verification.get("verified"):
+        badge = f' <span class="tl-pill tl-red">Rejected by expert ({esc(verified_by)})</span>'
+    elif verified_by:
+        badge = f' <span class="tl-pill tl-green">Verified by expert ({esc(verified_by)})</span>'
+    else:
+        badge = ""
 
     st.markdown(
-        f'<div class="tl-card{muted}">'
-        f'<div class="tl-src-head"><div><div class="tl-src-title">#{rank} {esc(s["title"])}</div>'
+        f'<div class="tl-src tl-src-{group}">'
+        f'<div class="tl-src-top"><div><div class="tl-src-title">{esc(s["title"])}</div>'
         f'<div class="tl-meta">{meta}</div></div>'
-        f'<div><div class="tl-score">{s["trust_score"]:.2f}</div><div class="tl-score-cap">trust</div></div></div>'
-        f'<div class="tl-bar"><div class="tl-bar-{lvl}" style="width:{int(round(s["trust_score"] * 100))}%"></div></div>'
-        f'<div class="tl-signals">{signals}</div>'
-        f'<div class="tl-quote">{esc(s["excerpt"])}</div>'
-        f'{status_html}</div>',
+        f'<span class="tl-pill tl-{group}">trust {s["trust_score"]:.2f}</span></div>'
+        f'<div class="tl-why">{esc(why)}{badge}</div>'
+        f'<details><summary>Show details</summary>{signal_rows}'
+        f'<div class="tl-quote">{esc(s["excerpt"])}</div></details>'
+        f'</div>',
         unsafe_allow_html=True,
     )
 
     if is_expert:
-        c1, c2, _ = st.columns([1, 1, 4])
+        c1, c2, _ = st.columns([1, 1, 3])
         for col, label, verdict in ((c1, "Verify", True), (c2, "Reject", False)):
             if col.button(label, key=f"{label}-{s['id']}", width="stretch"):
                 if call(api.verify, st.session_state["token"], s["id"], verdict) is not None:
@@ -285,16 +287,17 @@ def main():
     render_sidebar()
 
     st.markdown('<div class="tl-brand">TrustLens</div>'
-                '<div class="tl-tagline">From "I found something" to "I understand why I can rely on it."</div>',
+                '<div class="tl-tagline">Find an answer, and see exactly why you can (or can\'t) rely on it.</div>',
                 unsafe_allow_html=True)
 
     if "token" not in st.session_state:
-        st.info("Sign in on the left to ask a question. Demo users: jonas, lars (consultants), sofie (expert).")
+        st.info("Sign in on the left to ask a question. Demo users: jonas, lars (consultants), sofie (expert). "
+                "Password: hackathon.")
         return
 
     with st.form("ask"):
-        question = st.selectbox("Your question", DEMO_QUESTIONS, index=0, accept_new_options=True)
-        st.caption("Pick a question or type your own. This proof of concept covers payroll input cutoffs only.")
+        question = st.selectbox("Your question", DEMO_QUESTIONS, index=0, accept_new_options=True,
+                                help="Pick a question or type your own. This demo covers payroll input cutoffs.")
         submitted = st.form_submit_button("Ask", type="primary")
     if submitted and question:
         with st.spinner("Checking sources..."):
@@ -309,17 +312,25 @@ def main():
 
     lvl, summary, rejected, confirm = parse_uncertainty(result["uncertainty"])
     backers = parse_backers(split_answer(result["answer"])[1])
+    grouped: dict[str, list] = {g: [] for g in GROUPS}
+    for s in result["sources"]:
+        group, why = classify(s, rejected, backers)
+        grouped[group].append((s, why))
 
-    render_answer(result, rejected, lvl, summary, confirm)
+    render_answer(result, lvl, summary, confirm, {g: len(items) for g, items in grouped.items()})
     render_conflicts(result["conflicts"])
 
-    sources = result["sources"]
-    st.markdown(f'<div class="tl-label" style="margin-top:0.8rem">Sources ({len(sources)}), ranked by trust</div>',
-                unsafe_allow_html=True)
+    st.markdown('<div class="tl-label" style="margin:1.2rem 0 0.4rem 0">Sources</div>', unsafe_allow_html=True)
     verified = st.session_state.get("verified", {})
     is_expert = st.session_state["user"]["role"] in ("expert", "admin")
-    for rank, s in enumerate(sources, start=1):
-        render_source(rank, s, source_status(s, rejected, backers), verified.get(s["id"]), is_expert)
+    for group, (title, hint, icon, expanded) in GROUPS.items():
+        items = grouped[group]
+        if not items:
+            continue
+        with st.expander(f":{group}[**{title}**] ({len(items)})", icon=icon, expanded=expanded):
+            st.caption(hint)
+            for s, why in items:
+                render_source(s, group, why, verified.get(s["id"]), is_expert)
 
 
 main()

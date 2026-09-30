@@ -114,9 +114,13 @@ tests/                  run: py -m pytest tests/ -v
   test_security.py      auth, RBAC, real IDOR (client filter), input validation, demo scenario
   test_trust_score.py   claim extraction and every signal
 frontend/
-  app.py                Streamlit answer screen: login, question, answer card, uncertainty, who to ask,
-                        "not relied on, and why", conflict cards, ranked source cards with signal badges,
-                        Verify/Reject buttons for experts. All API/document text escaped via esc() before HTML.
+  app.py                Streamlit answer screen (newbie-friendly): answer card with uncertainty + who to ask,
+                        tally pills, conflicts in one expander, sources in 3 collapsible traffic-light groups:
+                        green "Safe to rely on" (supports answer, trust >= 0.75, open by default),
+                        orange "Check before using" (weak supporter or context), red "Don't rely on" (backend
+                        rejected it). Each card: title, meta, trust, one "why" line; "Show details" reveals the
+                        5 signals + source text. Verify/Reject buttons for experts.
+                        All API/document text escaped via esc() before HTML.
   api.py                httpx client (API_URL env, default http://localhost:8000); 401 -> session dropped
   .streamlit/config.toml light theme, port 8501, telemetry off
   Dockerfile            non-root, used by docker-compose
