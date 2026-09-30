@@ -1,0 +1,92 @@
+[
+  {
+    "id": "pol-be-cutoff-v3",
+    "title": "Payroll Input Cutoff - Belgium (v3)",
+    "source_type": "policy",
+    "owner": "Payroll Operations BE",
+    "updated_at": "2026-06-15",
+    "country": "BE",
+    "client": null,
+    "content": "Payroll input for Belgian clients must be received no later than the 5th working day of the month. Enterprise clients (500+ employees) with a signed SLA addendum may submit until the 7th working day. This version replaces v2 (2023)."
+  },
+  {
+    "id": "pol-be-cutoff-v2",
+    "title": "Payroll Input Cutoff - Belgium (v2)",
+    "source_type": "policy",
+    "owner": "Payroll Operations BE",
+    "updated_at": "2023-02-10",
+    "country": "BE",
+    "client": null,
+    "content": "Payroll input for Belgian clients must be received no later than the 8th working day of the month. No exceptions apply."
+  },
+  {
+    "id": "pol-nl-cutoff",
+    "title": "Payroll Input Cutoff - Netherlands",
+    "source_type": "policy",
+    "owner": "Payroll Operations NL",
+    "updated_at": "2026-04-02",
+    "country": "NL",
+    "client": null,
+    "content": "Payroll input for Dutch clients must be received no later than the 3rd working day of the month."
+  },
+  {
+    "id": "wiki-cutoff-cheatsheet",
+    "title": "Cutoff dates cheat sheet",
+    "source_type": "wiki",
+    "owner": null,
+    "updated_at": "2024-09-03",
+    "country": "BE",
+    "client": null,
+    "content": "Quick reference: BE payroll input cutoff is the 8th working day. See the policy for details."
+  },
+  {
+    "id": "chat-teams-delvaux",
+    "title": "Teams #payroll-be",
+    "source_type": "chat",
+    "owner": "Jonas Peeters",
+    "updated_at": "2025-11-12",
+    "country": "BE",
+    "client": "Brouwerij Delvaux",
+    "content": "Heads up: for Brouwerij Delvaux we accept input until the 7th working day since they signed the enterprise addendum."
+  },
+  {
+    "id": "chat-teams-10th",
+    "title": "Teams #payroll-be",
+    "source_type": "chat",
+    "owner": "Lars Wouters",
+    "updated_at": "2026-08-20",
+    "country": "BE",
+    "client": null,
+    "content": "Pretty sure the cutoff is the 10th now, someone from finance mentioned it."
+  },
+  {
+    "id": "email-compliance-v3",
+    "title": "Cutoff policy update",
+    "source_type": "email",
+    "owner": "Sofie Maes",
+    "updated_at": "2026-06-16",
+    "country": "BE",
+    "client": null,
+    "content": "As of July 2026 the BE input cutoff moves from the 8th to the 5th working day, see policy v3. Enterprise addendum clients keep the 7th."
+  },
+  {
+    "id": "client-note-delvaux",
+    "title": "Client file - Brouwerij Delvaux",
+    "source_type": "client_note",
+    "owner": "Jonas Peeters",
+    "updated_at": "2026-03-01",
+    "country": "BE",
+    "client": "Brouwerij Delvaux",
+    "content": "Enterprise client, 620 employees. SLA addendum signed 2026-02-20: payroll input cutoff is the 7th working day."
+  },
+  {
+    "id": "client-note-vermeulen",
+    "title": "Client file - Garage Vermeulen",
+    "source_type": "client_note",
+    "owner": "Lars Wouters",
+    "updated_at": "2026-05-10",
+    "country": "BE",
+    "client": "Garage Vermeulen",
+    "content": "SME client, 45 employees. Standard cutoff applies. Contact person: An Claes."
+  }
+]
