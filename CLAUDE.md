@@ -50,9 +50,25 @@ Expert for verification: Sofie Maes (Payroll Compliance Lead BE).
 - No secrets in code or history. Use `.env` (gitignored); GCP service account files (`gcp-*.json`) are gitignored.
 
 ## Ownership
-- Person 1: `backend/`, `tests/`
-- Person 2: `frontend/`, `docs/`, `README.md`
+- **Sadaq**: `backend/` (incl. LLM layer, trust logic, security, DEMO_MODE), `tests/`
+- **Adrian**: `frontend/` (Streamlit), `docs/`, `README.md`. Works on branch `adrian`.
 - Shared: `schemas.py` (coordinate changes), `.env.example`, `data/`
+- In Adrian's sessions: touch only `frontend/` (+ docs/README). Do NOT edit `backend/` or `tests/`.
+  If the frontend needs a backend change, add it under "Requests for Sadaq" instead of changing it.
+
+## Requests for Sadaq (from frontend)
+1. **docker-compose is broken for the backend.** In the container `engine.py` resolves `CORPUS_DIR` to `/data`
+   (three parents up from `/app/app/engine.py`), but compose mounts `./data` at `/app/data`, so the corpus is not found
+   and every answer is "No source...". The same mount also hides `backend/data` (users.json -> login fails) and is
+   `:ro`, so writing `demo_cache.json` / `ai_cache.json` fails. Suggest: make the corpus path configurable
+   (`CORPUS_DIR` env var) and mount `./data` at e.g. `/corpus:ro`.
+2. **DEMO_MODE cache hides verification.** A cached /ask response keeps the old `verified_by`, so after Sofie verifies,
+   Jonas re-asking the same question sees no change. Apply `verified_by` after reading the cache (or skip caching it).
+3. **Structured fields instead of prose** (frontend currently parses the text, which breaks if wording changes):
+   `supporting_source_ids: list[str]`, `not_relied_on: list[{source_id, claim, reason}]`,
+   `uncertainty_level: "low" | "medium" | "high"`. Optional, additive schema change.
+4. Rejected verifications are not in /ask (`verified_by` only set when verified=True). Frontend reads
+   `/claims/verified` for now, so this is low priority.
 
 ## Repo structure (current)
 ```
@@ -80,7 +96,14 @@ data/
 tests/                  run: py -m pytest tests/ -v
   test_security.py      auth, RBAC, real IDOR (client filter), input validation, demo scenario
   test_trust_score.py   claim extraction and every signal
-frontend/               not started
+frontend/
+  app.py                Streamlit answer screen: login, question, answer card, uncertainty, who to ask,
+                        "not relied on, and why", conflict cards, ranked source cards with signal badges,
+                        Verify/Reject buttons for experts. All API/document text escaped via esc() before HTML.
+  api.py                httpx client (API_URL env, default http://localhost:8000); 401 -> session dropped
+  .streamlit/config.toml light theme, port 8501, telemetry off
+  Dockerfile            non-root, used by docker-compose
+  requirements.txt      streamlit, httpx
 ```
 
 ## Running (cmd)
@@ -91,6 +114,16 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 ```
 Test at http://localhost:8000/docs. Log in via `/auth/login`, then send `Authorization: Bearer <token>`.
+
+Frontend (second cmd window, backend must be running):
+```
+cd frontend
+py -3.13 -m venv .venv
+.venv\Scripts\activate.bat
+pip install -r requirements.txt
+streamlit run app.py
+```
+Open http://localhost:8501, sign in as jonas / hackathon.
 
 ## Status
 Done:
@@ -133,7 +166,7 @@ How the answer is decided (deterministic, no LLM):
 1. ~~Connect Aikido account + repo~~
 2. ~~Switch backend to Delvaux scenario~~ DONE
 3. ~~Retrieval + scoring, scope_match, claim-based corroboration~~ DONE
-4. Frontend (Streamlit): one answer screen against /ask  <- NEXT (Person 2)
+4. ~~Frontend (Streamlit): one answer screen against /ask~~ DONE (first version, branch `adrian`)
 5. LLM layer: claim extraction via Gemini (optional, regex works for demo)
 6. ~~Role-based access: IDOR client filter~~ DONE
 7. FIRST Aikido AI Code Audit = "before" screenshot
