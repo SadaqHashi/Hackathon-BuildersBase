@@ -32,12 +32,25 @@ def _source_type_score(source_type: str) -> Signal:
     return Signal(name="source_type", score=score, reason=f"Source type: {source_type}")
 
 
-def compute_signals(source: dict) -> list[Signal]:
-    return [
+def _corroboration_score(source: dict, all_sources: list[dict]) -> Signal:
+    others = [s for s in all_sources if s.get("id") != source.get("id")]
+    if not others:
+        return Signal(name="corroboration", score=0.5, reason="Only source available")
+    same_type = [s for s in others if s.get("source_type") == source.get("source_type")]
+    if same_type:
+        return Signal(name="corroboration", score=0.9, reason=f"Corroborated by {len(same_type)} similar source(s)")
+    return Signal(name="corroboration", score=0.4, reason="No corroborating sources of same type")
+
+
+def compute_signals(source: dict, all_sources: list[dict] | None = None) -> list[Signal]:
+    signals = [
         _recency_score(source.get("updated_at", "")),
         _ownership_score(source.get("owner")),
         _source_type_score(source.get("source_type", "unknown")),
     ]
+    if all_sources:
+        signals.append(_corroboration_score(source, all_sources))
+    return signals
 
 
 def compute_trust_score(signals: list[Signal]) -> float:

@@ -46,3 +46,13 @@ def get_current_user(authorization: str = Header(default="")) -> dict:
 def require_role(user: dict, allowed_roles: list[str]):
     if user["role"] not in allowed_roles:
         raise HTTPException(status_code=403, detail="Insufficient permissions")
+
+
+def require_not_self(user: dict, target_username: str):
+    if user["username"] == target_username:
+        raise HTTPException(status_code=403, detail="Cannot verify your own claims")
+
+
+def validate_input_length(text: str, max_length: int = 2000):
+    if len(text) > max_length:
+        raise HTTPException(status_code=400, detail=f"Input exceeds maximum length of {max_length} characters")
